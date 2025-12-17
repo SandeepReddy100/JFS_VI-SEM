@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Course Registration Form</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
@@ -51,13 +51,21 @@
         </div>
 
         <button type="submit">Submit Registration</button>
+        <div id="result" class="result-box">
+            <h3><strong>Details:</strong> </h3>
+                <p id="registrationDetails"></p>
+            <h3>Selected Subjects:</h3>
+                <ul id="selectedSubjectsList"></ul>
+            <h3>Total Fee:</h3>
+                <p id="totalFeeDisplay"></p>
+
+        </div>
     </form>
-	
-	<div id="result" style="margin-top:60px;background-color: pink;display:none"></div>
 </div>
 
 
-<script src="js/script.js"></script>
+
+<script src="script.js"></script>
 
 </body>
 </html>

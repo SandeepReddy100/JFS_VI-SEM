@@ -23,12 +23,27 @@
             font-size: 20px;
             margin-top: 30px;
         }
+        .today {
+        background-color: #ffe082; /* light yellow */
+        font-weight: bold;
+    }
     </style>
 </head>
 <body>
 
 <h2>Upload CSV File</h2>
 <input type="file" id="csvFile" accept=".csv">
+
+<select name="select faculty" id="facultySelect">
+
+    <option value="" disabled selected>Select Faculty</option>
+    <option value="All">All Faculties</option>
+    <option value="10209 : Dr. B. Padmaja">Dr. B. Padmaja</option>
+    <option value="10237 :  Mr E. Krishna Rao Patro">Mr E. Krishna Rao Patro</option>
+    <option value=" 20232 : Mr. I N V Suryanarayana">Mr. I N V Suryanarayana</option>
+    <option value="10879 : Dr. C V R Padmaja">Dr. C V R Padmaja</option>
+</select>
+<button id="printBtn" >Print Selected Faculty Timetable</button>
 
 <div id="tables"></div>
 
@@ -38,44 +53,72 @@ document.getElementById("csvFile").addEventListener("change", function () {
         header: true,
         skipEmptyLines: true,
         complete: function (result) {
-            processCSV(result.data);
+            csvData = result.data;
+            alert("CSV Loaded Successfully");
         }
     });
 });
 
-function processCSV(data) {
+document.getElementById("printBtn").addEventListener("click", function () {
+    const facultyName = document.getElementById("facultySelect").value;
+
+    if (!facultyName) {
+        alert("Please select a faculty");
+        return;
+    }
+
+    if (csvData.length === 0) {
+        alert("Please upload CSV first");
+        return;
+    }
+
+    processCSV(csvData, facultyName);
+});
+let csvData = [];
+
+function processCSV(data, facultyName) {
     const timetable = {};
 
     data.forEach(row => {
-        const batch = row["BATCH"];
+        if (row["FACULTY"] !== facultyName) return; // 🔥 FIX
+
         const day = row["DAY"];
-        const session = row["SESSION"];  // FN / AN
+        const session = row["SESSION"];
         const course = row["COURSE"];
         const room = row["ROOM"];
-		const faculty = row["FACULTY"];
 
-        if (!batch || !day || !session) return;
+        if (!day || !session) return;
 
-        if (!timetable[batch]) {
-            timetable[batch] = {};
-        }
-        if (!timetable[batch][day]) {
-            timetable[batch][day] = { FN: "", AN: "" };
+        if (!timetable[facultyName]) {
+            timetable[facultyName] = {};
         }
 
-        // store course + room
-        timetable[batch][day][session] = `${course}<br>Room: ${room}<br>Faculty:${faculty}`;
+        if (!timetable[facultyName][day]) {
+            timetable[facultyName][day] = { FN: "", AN: "" };
+        }
+
+        timetable[facultyName][day][session] =
+            `${course}<br>Room: ${room}`;
     });
 
-    buildTables(timetable);
+    if (facultyName === "All") {
+        buildTables(timetable, facultyName);
+        return;
+    }
+
+    buildTable(timetable, facultyName);
 }
-function buildTables(timetable) {
+
+function buildTables(timetable,facultyName) {
     const container = document.getElementById("tables");
     container.innerHTML = "";
 
+    let today= new Date();
+    let todayDay= today.getDay(); //0-Sun,1-Mon,2-Tue,3-Wed,4-Thu,5-Fri,6-Sat
     const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-
-    for (const batch in timetable) {
+    console.log(facultyName);
+    for (const faculty in timetable) 
+    {
 
         // Wrapper div for each table + button
         const wrapper = document.createElement("div");
@@ -83,25 +126,26 @@ function buildTables(timetable) {
 
         // Title
         const title = document.createElement("div");
-        title.className = "batch-title";
-        title.innerHTML = `Batch: ${batch}`;
+        title.className = "faculty";
+        title.innerHTML = `faculty: ${  faculty}`;
+
+        
 
         // Print button
         const btn = document.createElement("button");
         btn.innerHTML = "Print This Timetable";
         btn.style.marginBottom = "10px";
         btn.onclick = function () {
-            printTable(batch);
+            printTable(faculty);
         };
 
-        // Table
         const table = document.createElement("table");
-        table.id = `table_${batch}`;
+        table.id = `table_${faculty}`;
 
         let html = "<tr><th>DAY</th><th>FN</th><th rowspan=7>L<br>U<br>N<br>C<br>H</th><th>AN</th></tr>";
         days.forEach(day => {
-            const fn = timetable[batch][day]?.FN || "";
-            const an = timetable[batch][day]?.AN || "";
+            const fn = timetable[faculty][day]?.FN || "";
+            const an = timetable[faculty][day]?.AN || "";
             html += `
                 <tr>
                     <td>${day}</td>
@@ -113,19 +157,64 @@ function buildTables(timetable) {
 
         table.innerHTML = html;
 
+
         // Add everything to wrapper
         wrapper.appendChild(title);
         wrapper.appendChild(btn);
         wrapper.appendChild(table);
 
         container.appendChild(wrapper);
+
     }
+    
+}
+function buildTable(timetable, faculty) {
+    const container = document.getElementById("tables");
+    container.innerHTML = "";
+
+    const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+    // Get today's day in MON/TUE format
+    const today = new Date()
+        .toLocaleDateString("en-US", { weekday: "short" })
+        .toUpperCase();
+
+    const table = document.createElement("table");
+    table.id = `table_${faculty}`;
+
+    let html = `
+        <tr>
+            <th>DAY</th>
+            <th>FN</th>
+            <th rowspan="7">L<br>U<br>N<br>C<br>H</th>
+            <th>AN</th>
+        </tr>
+    `;
+
+    days.forEach(day => {
+        const fn = timetable[faculty][day]?.FN || "";
+        const an = timetable[faculty][day]?.AN || "";
+
+        // Highlight today's row
+        const highlightClass = day === today ? "today" : "";
+
+        html += `
+            <tr class="${highlightClass}">
+                <td>${day}</td>
+                <td>${fn}</td>
+                <td>${an}</td>
+            </tr>
+        `;
+    });
+
+    table.innerHTML = html;
+    container.appendChild(table);
 }
 
-// Print only selected batch table
-function printTable(batch) {
-    const tableHTML = document.getElementById(`table_${batch}`).outerHTML;
-    const title = `<h2>Batch: ${batch}</h2>`;
+// Print only selected faculty table
+function printTable(faculty) {
+    const tableHTML = document.getElementById(`table_${faculty}`).outerHTML;
+    const title = `<h2>Faculty: ${faculty}</h2>`;
 
     const printWindow = window.open("", "", "width=900,height=600");
     printWindow.document.write(`
@@ -149,6 +238,15 @@ function printTable(batch) {
     printWindow.print();
 }
 
+// function printSelectedFaculty() {
+//     const select = document.getElementById("facultySelect");
+//     const faculty = select.value;
+//     if (faculty) {
+//         buildTables(timetable,faculty);
+//     } else {
+//         alert("Please select a faculty.");
+//     }
+// }
 /*
 function buildTables(timetable) 
 {
